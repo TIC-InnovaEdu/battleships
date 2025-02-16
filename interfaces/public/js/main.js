@@ -13,6 +13,24 @@
       const joinForm = d.querySelector('#join-form');
       const createForm = d.querySelector('#create-form');
   
+      // Obtener el nombre del usuario del localStorage
+      const userName = localStorage.getItem('userName');
+
+      // Auto-completar campos de nombre si existe
+      if (userName) {
+        const joinNameInput = joinForm.querySelector('input[name="playerName"]');
+        const createNameInput = createForm.querySelector('input[name="playerName"]');
+        if (joinNameInput) {
+          joinNameInput.value = userName;
+          joinNameInput.readOnly = true; // Bloquear el campo
+        }
+        
+        if (createNameInput) {
+            createNameInput.value = userName;
+            createNameInput.readOnly = true; // Bloquear el campo
+        }
+      }
+
       // Init function
       (async function init() {
         const hasPlayerNoId = state.playerId === '';
@@ -82,14 +100,25 @@
     // Update games list
     function updateGamesList(gamesData, gamesListElement) {
       gamesListElement.innerHTML = '';
-  
-      gamesData.forEach((game) => {
-        if (game.players[0].id !== state.playerId) {
-          gamesListElement.innerHTML += `
-            <option value="${game.id}">${game.gameName} (${game.players.length}/2)</option>
-          `;
-        }
+
+      // Obtener el nombre del usuario actual
+      const currentUserName = localStorage.getItem('userName');
+
+      // Filtrar las partidas donde el usuario actual es el creador
+      const availableGames = gamesData.filter(game => {
+        return game.players[0].playerName !== currentUserName;
       });
+
+      if (availableGames.length > 0) {
+        availableGames.forEach((game) => {
+          const hostName = game.players[0].playerName || 'Jugador desconocido';
+          gamesListElement.innerHTML += `
+            <option value="${game.id}">Partida de ${hostName} (${game.players.length}/2)</option>
+          `;
+        });
+      } else {
+        gamesListElement.innerHTML = '<option value="">No hay partidas disponibles</option>';
+      }
     }
   
     // Fetch list of games from server
@@ -129,5 +158,11 @@
     }
   })(window, document);
   
+  function playClickSound() {
+    const sound = document.getElementById('clickSound');
+    sound.currentTime = 0; // Reinicia el sonido si ya está reproduciéndose
+    sound.play();
+  }
+
   const generateUUID = () =>
     Math.random().toString(36).substring(2) + Date.now().toString(36);

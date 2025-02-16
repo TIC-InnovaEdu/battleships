@@ -69,34 +69,29 @@
                 </thead>
                 <tbody>
                   <tr>
-                    <td>10x</td>
-                    <td>Battleship</td>
+                    <td class="ship-count" data-ship-type="fragata">1x</td>
+                    <td class="barco" id="fragata">Fragata</td>
                     <td>1</td>
                   </tr>
                   <tr>
-                    <td>1x</td>
-                    <td>Carrier</td>
-                    <td>5</td>
-                  </tr>
-                  <tr>
-                    <td>1x</td>
-                    <td>Battleship</td>
-                    <td>4</td>
-                  </tr>
-                  <tr>
-                    <td>1x</td>
-                    <td>Cruiser</td>
-                    <td>3</td>
-                  </tr>
-                  <tr>
-                    <td>2x</td>
-                    <td>Destroyer</td>
+                    <td class="ship-count" data-ship-type="destructor">1x</td>
+                    <td class="barco" id="destructor">Destructor</td>
                     <td>2</td>
                   </tr>
                   <tr>
-                    <td>2x</td>
-                    <td>Submarine</td>
-                    <td>1</td>
+                    <td class="ship-count" data-ship-type="submarino">1</td>
+                    <td class="barco" id="submarino">Submarino</td>
+                    <td>3</td>
+                  </tr>
+                  <tr>
+                    <td class="ship-count" data-ship-type="acorazado">1</td>
+                    <td class="barco" id="acorazado">Acorazado</td>
+                    <td>4</td>
+                  </tr>
+                  <tr>
+                    <td class="ship-count" data-ship-type="portaviones">1</td>
+                    <td class="barco" id="portaviones">Portaviones</td>
+                    <td>5</td>
                   </tr>
                 </tbody>
               </table>
@@ -130,13 +125,9 @@
             </div>
           </div>
         </div>
-
-
-        
       </main>
     </div>
   </div>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qs/6.9.4/qs.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="./js/game.js"></script>

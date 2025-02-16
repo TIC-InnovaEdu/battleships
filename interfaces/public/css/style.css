@@ -158,6 +158,152 @@ input[type='submit'],
   background-color: #206f86;
   cursor: pointer;
 }
+/* Ajuste de posición general para el cursor follower */
+.cursor-follower {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-10%, -60%); /* Mueve los barcos hacia arriba */
+}
+.cursor-follower {
+  position: fixed !important;
+  will-change: transform;
+}
+.ship-preview {
+  position: relative;
+  display: flex;
+  align-items: flex-start; /* Change from center to flex-start */
+  justify-content: flex-start; /* Change from center to flex-start */
+}
+
+/* Tamaños específicos para cada tipo de barco en el preview */
+.ship-preview img {
+  height: 20px; /* Tamaño base más pequeño */
+  width: auto;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+
+/* Ajuste de anchos para los barcos en el preview */
+.ship-preview.fragata { 
+  width: 20px; /* 1 cell */
+}
+
+.ship-preview.destructor { 
+  width: 45px; /* 2 cells */
+}
+
+.ship-preview.submarino { 
+  width: 70px; /* 3 cells */
+}
+
+.ship-preview.acorazado { 
+  width: 90px; /* 4 cells */
+}
+
+.ship-preview.portaviones { 
+  width: 110px; /* 5 cells */
+}
+/* Ajustes de altura específicos para cada tipo de barco en el preview */
+.ship-preview.fragata img {
+  height: 20px;
+}
+
+.ship-preview.destructor img {
+  height: 20px;
+}
+
+.ship-preview.submarino img {
+  height: 20px;
+}
+
+.ship-preview.acorazado img {
+  height: 20px;
+}
+
+.ship-preview.portaviones img {
+  height: 20px;
+}
+/* Orientaciones */
+.ship-preview.vertical img {
+  transform: rotate(90deg);
+  transform-origin: 10px 10px; /* Ajustado para el nuevo tamaño */
+}
+
+
+
+
+/* Ship image positioning */
+.ship-image {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform-origin: left center;
+  height: 20px;
+  transition: transform 0.3s ease;
+}
+
+/* Ship orientation classes */
+.horizontal .ship-image {
+  transform: translateY(-50%);
+}
+
+.vertical .ship-image {
+  transform: translateY(-50%) rotate(90deg);
+  transform-origin: 10px center; /* Half of cell height (40px/2) */
+}
+
+/* Ship type specific sizes */
+.fragata .ship-image {
+  width: 20px; /* 1 cell */
+}
+
+.destructor .ship-image {
+  width: 45px; /* 2 cells */
+}
+
+.submarino .ship-image {
+  width: 70px; /* 3 cells */
+}
+
+.acorazado .ship-image {
+  width: 90px; /* 4 cells */
+}
+
+.portaviones .ship-image {
+  width: 110px; /* 5 cells */
+}
+
+/* Ship cell styling */
+.ship {
+  background-color: transparent !important;
+  position: relative;
+  z-index: 1;
+}
+
+.ship-continuation {
+  background-color: transparent !important;
+}
+
+/* Hit state styling */
+.ship-hit .ship-image {
+  opacity: 0.7;
+  filter: brightness(0.8) contrast(1.2);
+}
+
+/* Base cell size */
+.cell {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+/* Vista previa de barcos en cuadricula*/
+
+
 
 .panel,
 .info,
@@ -401,7 +547,7 @@ input[type='submit'],
 }
 
 .option-btn:hover:not(:disabled) {
-  background: rgba(51, 195, 240, 0.2);
+  background: rgba(252, 252, 252, 0.712);
   transform: translateX(5px);
 }
 
@@ -412,7 +558,7 @@ input[type='submit'],
 
 .option-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .quiz-footer {
@@ -537,4 +683,97 @@ input[type='submit'],
 
 .countdown-overlay.fade-out {
   animation: fadeOut 0.5s ease-out forwards;
+}
+
+/*Partida Terminada*/
+.game-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease-out;
+}
+
+
+
+.game-over-content {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.548);
+  padding: 2rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.5s ease-in;
+  backdrop-filter: blur(8px);
+}
+
+.game-over-content h2 {
+  color: #f3f3f3be;
+  font-size: 5rem;
+  margin: 0;
+  font-family: 'Arial', sans-serif;
+  text-shadow: 0 0 10px rgba(253, 253, 253, 0.329);
+  animation: pulse 1s infinite;
+}
+.game-over-content p {
+  color: #666666;
+  font-size: 3rem;
+  font-weight: bold;
+  color: #4c98af;
+  margin: 1rem 0;
+  animation: scaleNumber 1s infinite;
+}
+
+input[readonly] {
+  background-color: #f0f0f0;
+  cursor: not-allowed;
+}
+
+/*Barcos*/
+
+.barco {
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: background-color 0.3s;
+}
+
+.barco:hover {
+  background-color: #e0e0e0;
+}
+
+.barco.selected {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.barco.unavailable {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.count-updated {
+  animation: countUpdate 0.3s ease-in-out;
+}
+
+@keyframes countUpdate {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+    color: #ff4444;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.barco.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

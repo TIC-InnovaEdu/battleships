@@ -1,3 +1,85 @@
+const AudioManager = {
+  backgroundMusic: new Audio('/assets/audios/Battleship.ogg'),
+  sounds: {
+    //click: new Audio('/assets/audios/click.wav'),
+    explosion: new Audio('/assets/audios/Explosion.mp3'),
+    splash: new Audio('/assets/audios/disparo_al_agua.wav'),
+    victory: new Audio('/assets/audios/Fin del juego.wav'),
+    defeat: new Audio('/assets/audios/Fin del juego.wav'),
+    questionAppear: new Audio('/assets/audios/alarma.wav'),
+    //correctAnswer: new Audio('/assets/audios/correct-answer.mp3'),
+    //wrongAnswer: new Audio('/assets/audios/wrong-answer.mp3'),
+    //countdown: new Audio('/assets/audios/.mp3')
+  },
+  settings: {
+    musicEnabled: true,
+    soundEnabled: true
+  },
+
+  init() {
+    // Configure background music
+    this.backgroundMusic.loop = true;
+    this.backgroundMusic.volume = 0.3;
+
+    // Configure sound effects
+    Object.values(this.sounds).forEach(sound => {
+      sound.volume = 0.5;
+    });
+
+    // Load settings from localStorage if available
+    const savedSettings = localStorage.getItem('audioSettings');
+    if (savedSettings) {
+      this.settings = JSON.parse(savedSettings);
+      if (!this.settings.musicEnabled) this.backgroundMusic.pause();
+    }
+  },
+
+  toggleMusic() {
+    this.settings.musicEnabled = !this.settings.musicEnabled;
+    if (!this.backgroundMusic) return;
+
+    if (this.backgroundMusic.paused) {
+      this.backgroundMusic.play();
+      this.settings.musicEnabled = true;
+      
+    } else {
+      this.backgroundMusic.pause();
+      this.settings.musicEnabled = false;
+      
+    }
+    this.saveSettings();
+  },
+
+  toggleSound() {
+    this.settings.soundEnabled = !this.settings.soundEnabled;
+    this.saveSettings();
+  },
+
+  playSound(soundName) {
+    if (this.settings.soundEnabled && this.sounds[soundName]) {
+      const sound = this.sounds[soundName];
+      sound.currentTime = 0;
+      sound.play();
+    }
+  },
+
+  saveSettings() {
+    localStorage.setItem('audioSettings', JSON.stringify(this.settings));
+  },
+  loadSettings() {
+    const savedSettings = localStorage.getItem("audioSettings");
+    if (savedSettings) {
+      this.settings = JSON.parse(savedSettings);
+      if (!this.settings.musicEnabled) {
+        this.backgroundMusic.pause();
+      }
+    }
+  }
+};
+
+// Cargar configuración guardada
+AudioManager.saveSettings();
+
 (function (w, d) {
   // Get data from query string
   const { playerName, game, playerId } = Qs.parse(location.search, {
@@ -21,19 +103,19 @@
 
   // Strings
   const strings = {
-    getInitialGameConsoleString: () => `Please wait! Initializing Game...`,
-    getInitialCurrentTurnString: () => "Initializing Game...",
-    getLeaveConfirmText: () => `Are you sure you want to leave the game?`,
-    getEnemyGridCaption: () => "Enemy Waters",
-    getHomeGridCaption: () => "Home Waters",
+    getInitialGameConsoleString: () => `Por favor, espere. Inicializando el juego...`,
+    getInitialCurrentTurnString: () => "Inicializando el juego...",
+    getLeaveConfirmText: () => `¿Estás seguro de que quieres dejar el juego?`,
+    getEnemyGridCaption: () => "Enemigo",
+    getHomeGridCaption: () => "Tú",
     getGameHasNotStartedErrorMessage: () =>
-      "You cannot attack yet, because the game hasn't started. Please place all of your ships for the game to begin!",
+      "Todavía no puedes atacar, porque el juego no ha comenzado. Por favor, coloque todas sus barcos para que el juego comience!",
     getWrongFieldClickedErrorMessage: () =>
-      "There's no point in clicking here! Click on your enemies' play field to attack his ships.",
+      "¡No tiene sentido hacer clic aquí! Haz clic en el campo de juego de tu enemigo para atacar sus barcos.",
     getGameIsAlreadyOverErrorMessage: () =>
-      "Game is over! You can stop clicking!",
+      "¡Se acabó el juego! Puede dejar de hacer clic!",
   };
-
+  
   // Game states
   const gameStates = {
     gameIsInitializing: "gameIsInitializing",
@@ -42,6 +124,15 @@
     gameRunning: "gameRunning",
     gameOver: "gameOver",
     gameQuestion: "gameQuestion",
+  };
+
+  // Ship configurations
+  const SHIPS = {
+    fragata: { size: 1, count: 4 },
+    destructor: { size: 2, count: 3 },
+    submarino: { size: 3, count: 2 },
+    acorazado: { size: 4, count: 1 },
+    portaviones: { size: 5, count: 1 }
   };
 
   // Global state variables
@@ -54,6 +145,15 @@
     PlayerGridData: initialGridData,
     currentRound: 0,
     yourTurn: false,
+    selectedShip: null,
+    orientation: 'horizontal', // or 'vertical'
+    placedShips: {
+      fragata: 0,
+      destructor: 0,
+      submarino: 0,
+      acorazado: 0,
+      portaviones: 0
+    }
   };
 
   // Prohibit modification of state
@@ -80,13 +180,27 @@
 
     // Init Game functions
     (function init() {
+
+      AudioManager.init();
+      playerGrids.forEach((grid) => {
+        grid.addEventListener("click", (e) => {
+          const elementId = e.target.closest(".grid").id;
+  
+          if (e.target.classList.contains("cell")) {
+            AudioManager.playSound('click');
+          }
+  
+          // ... (rest of the click handler remains the same)
+        });
+      });
+
       // Join Game
       socket.emit("joinGame", {
         gameId: state.gameId,
         playerId: state.playerId,
         playerName: state.playerName,
       });
-
+      
       // On receiving message
       socket.on("message", (message) =>
         addConsoleMessage(chatMessagesList, message)
@@ -106,9 +220,9 @@
       socket.on("yourTurn", (value) => {
         state.yourTurn = value;
         if (state.yourTurn) {
-          currentTurnText.innerHTML = `It's your turn!`;
+          currentTurnText.innerHTML = `Es tu turno!`;
         } else {
-          currentTurnText.innerHTML = `Other player's turn...`;
+          currentTurnText.innerHTML = `Turno del otro jugador...`;
         }
       });
       socket.on('showQuestion', (preguntaData) => {
@@ -136,7 +250,6 @@
 
       socket.on('correctAnswer', (data) => {
         hideQuizModal();
-        addConsoleMessage(chatMessagesList, `¡${data.playerName} respondió correctamente!`);
       });
       
       socket.on('wrongAnswer', () => {
@@ -185,36 +298,111 @@
         }
       });
 
+      socket.on("partidaTerminada", (data) => {
+        const gameOverDiv = document.createElement('div');
+        gameOverDiv.className = 'game-over-overlay';
+        
+        const mensaje = state.playerId === data.ganadorId ? 
+            '¡Has Ganado!' : 
+            '¡Has Perdido!';
+        
+        gameOverDiv.innerHTML = `
+            <div class="game-over-content">
+                <h2>${mensaje}</h2>
+                <p>Volviendo al menú en 5 segundos...</p>
+            </div>
+        `;
+        
+        document.body.appendChild(gameOverDiv);
+        
+        // Iniciar cuenta regresiva y redireccionar
+        let countdown = 5;
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            const countdownText = gameOverDiv.querySelector('p');
+            countdownText.textContent = `Volviendo al menú en ${countdown} segundos...`;
+            
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                window.location.href = './menu.html';
+            }
+        }, 1000);
+      });
+      socket.on("abandonopartida", (data) => {
+        const gameOverDiv = document.createElement('div');
+        gameOverDiv.className = 'game-over-overlay';
+        
+        const mensaje = state.playerId === data.ganadorId ? 
+            '¡Has Perdido!' : 
+            '¡Has Ganado!';
+        
+        gameOverDiv.innerHTML = `
+            <div class="game-over-content">
+                <h2>${mensaje}</h2>
+                <p>Volviendo al menú en 5 segundos...</p>
+            </div>
+        `;
+        
+        document.body.appendChild(gameOverDiv);
+        
+        // Iniciar cuenta regresiva y redireccionar
+        let countdown = 5;
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            const countdownText = gameOverDiv.querySelector('p');
+            countdownText.textContent = `Volviendo al menú en ${countdown} segundos...`;
+            
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+                window.location.href = './menu.html';
+            }
+        }, 1000);
+      });
+      // Al inicializar
+      toggleMusicBtn.textContent = "Música: ON";
+      toggleMusicBtn.addEventListener("click", (e) => {
+        AudioManager.toggleMusic();
+        toggleMusicBtn.textContent = AudioManager.settings.musicEnabled ? "Música: ON" : "Música: OFF";
+      });
+  
+      toggleSoundBtn.addEventListener("click", (e) => {
+        AudioManager.toggleSound();
+        toggleSoundBtn.textContent = AudioManager.settings.soundEnabled ? "Sonido: ON" : "Sonido: OFF";
+      });
+
       // On receiving gameStateChange
       socket.on("changeGameState", (newGameState) => {
         switch (newGameState) {
           case gameStates.gameInitialized:
+            AudioManager.backgroundMusic.play();
+            AudioManager.saveSettings();
             state.gameState = gameStates.gameInitialized;
-            currentTurnText.innerHTML = "Initialized";
+            currentTurnText.innerHTML = "Inicializando";
             console.log(state.gameState);
             break;
-
+            
           case gameStates.setShipsRound:
             state.gameState = gameStates.setShipsRound;
-            currentTurnText.innerHTML = "Place your ships!";
+            currentTurnText.innerHTML = "Coloca tus barcos!";
             console.log(state.gameState);
             break;
           case gameStates.gameQuestion:
             state.gameState = gameStates.gameQuestion;
             currentTurnText.innerHTML = "¡Responde la pregunta!";
             console.log("Cambiando a estado de preguntas");
+            removeShipFollower();
             socket.emit('gameQuestion');
             break;    
           case gameStates.gameRunning: {
             state.gameState = gameStates.gameRunning;
-            currentTurnText.innerHTML = "Let the fighting begin!";
+            currentTurnText.innerHTML = "¡Que empiece la lucha!";
             console.log(state.gameState);
             break;
           }
           case gameStates.gameOver:
             state.gameState = gameStates.gameOver;
-            currentTurnText.innerHTML = "Game Over!";
-            setTimeout(() => redirectToHomePage(), 10000);
+            currentTurnText.innerHTML = "Se acabó el juego!";
+            setTimeout(() => redirectToHomePage(), 5000);
             console.log(state.gameState);
             break;          
         }
@@ -244,6 +432,104 @@
         e.preventDefault();
         leaveGame();
       });
+      // click en barco
+
+      const cursorFollower = document.createElement('div');
+      cursorFollower.className = 'cursor-follower';
+      document.body.appendChild(cursorFollower);
+
+      document.querySelectorAll('.barco').forEach(shipElement => {
+        shipElement.addEventListener('click', (e) => {
+          if (!e.target.closest('.friendly-grid')) {
+            removeShipFollower();
+          }
+          const shipType = e.target.id;
+          if (state.gameState === gameStates.setShipsRound && 
+              state.placedShips[shipType] < SHIPS[shipType].count) {
+            state.selectedShip = shipType;
+            highlightSelectedShip(shipType);
+            createShipFollower(shipType);
+            addConsoleMessage(chatMessagesList, 
+              `Seleccionado ${shipType} (Tamaño: ${SHIPS[shipType].size}). Pulse 'R' para rotar.`);
+          }
+        });
+      });
+      
+
+      function createShipFollower(shipType) {
+        const shipImagePath = getShipImagePath(shipType);
+        const cursorFollower = document.querySelector('.cursor-follower');
+      
+        if (!cursorFollower) return;
+      
+        cursorFollower.innerHTML = `
+          <div class="ship-preview ${shipType} ${state.orientation}">
+            <img src="${shipImagePath}" alt="${shipType}" />
+          </div>
+        `;
+      
+        cursorFollower.style.display = 'block';
+        
+        // Update scroll position to ensure ship is visible
+        const shipElement = document.getElementById(shipType);
+        if (shipElement) {
+          const rect = shipElement.getBoundingClientRect();
+          if (rect.top < 0 || rect.bottom > window.innerHeight) {
+            shipElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      
+        document.addEventListener('mousemove', moveFollower);
+      }
+        function moveFollower(e) {
+          const cursorFollower = document.querySelector('.cursor-follower');
+          if (!cursorFollower) return;
+        
+          // Get viewport dimensions
+          const viewportHeight = window.innerHeight;
+          const viewportWidth = window.innerWidth;
+          
+          // Get ship preview dimensions
+          const shipPreview = cursorFollower.querySelector('.ship-preview');
+          const shipHeight = shipPreview ? shipPreview.offsetHeight : 0;
+          const shipWidth = shipPreview ? shipPreview.offsetWidth : 0;
+        
+          // Calculate position relative to scroll
+          let x = e.clientX;
+          let y = e.clientY;
+        
+          // Ensure the ship stays within viewport bounds
+          x = Math.min(x, viewportWidth - shipWidth);
+          y = Math.min(y, viewportHeight - shipHeight);
+        
+          // Apply position directly without transform
+          cursorFollower.style.left = `${x}px`;
+          cursorFollower.style.top = `${y}px`;
+        }
+      
+        function removeShipFollower() {
+          const cursorFollower = document.querySelector('.cursor-follower');
+          if (!cursorFollower) return;
+      
+          cursorFollower.style.display = 'none';
+          document.removeEventListener('mousemove', moveFollower);
+        }
+
+      function getShipImagePath(shipType) {
+        return `/assets/img/ships/${shipType}.png`;
+      }
+      // Add keyboard listener for rotation
+      document.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'r' && state.selectedShip) {
+          state.orientation = state.orientation === 'horizontal' ? 'vertical' : 'horizontal';
+          const shipPreview = document.querySelector('.ship-preview');
+          if (shipPreview) {
+            shipPreview.classList.remove('horizontal', 'vertical');
+            shipPreview.classList.add(state.orientation);
+          }
+        }
+      });
+  
 
       playerGrids.forEach((grid) => {
         grid.addEventListener("click", (e) => {
@@ -293,9 +579,15 @@
                 break;
 
               case "friendly-grid":
+                if (!state.selectedShip) {
+                  addConsoleMessage(chatMessagesList, "Por favor selecciona un barco primero");
+                  return;
+                }
                 socket.emit("clickOnFriendlyGrid", {
-                  x: e.target.dataset.x,
+                  x: parseInt(e.target.dataset.x),
                   y: e.target.dataset.y,
+                  shipType: state.selectedShip,
+                  orientation: state.orientation
                 });
 
                 console.log(
@@ -311,11 +603,6 @@
 
       showRulesBtn.addEventListener("click", (e) => {
         console.log("Show Rules Btn Pressed!");
-        alert("Coming Soon!");
-      });
-
-      toggleMusicBtn.addEventListener("click", (e) => {
-        console.log("Toggle Music Btn Pressed!");
         alert("Coming Soon!");
       });
 
@@ -398,6 +685,78 @@
   // Update grid
   function updateGrid(rootElement, captionText, data) {
     const letters = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"];
+    
+    
+    // Helper function to determine ship size at a position
+  function getShipSizeAtPosition(data, x, y) {
+    if (data[y][x] !== 1) return 0;
+    
+    // Check horizontal ship size
+    let horizontalSize = 1;
+    let i = x + 1;
+    while (i < 10 && data[y][i] === 1) {
+      horizontalSize++;
+      i++;
+    }
+    i = x - 1;
+    while (i >= 0 && data[y][i] === 1) {
+      horizontalSize++;
+      i--;
+    }
+    
+    // Check vertical ship size
+    let verticalSize = 1;
+    let j = y + 1;
+    while (j < 10 && data[j][x] === 1) {
+      verticalSize++;
+      j++;
+    }
+    j = y - 1;
+    while (j >= 0 && data[j][x] === 1) {
+      verticalSize++;
+      j--;
+    }
+    
+    return Math.max(horizontalSize, verticalSize);
+    }
+
+    // Helper function to determine ship orientation
+    function isHorizontalShip(data, x, y) {
+      return (x + 1 < 10 && data[y][x + 1] === 1) || (x - 1 >= 0 && data[y][x - 1] === 1);
+    }
+
+    // Helper function to check if this is the start of a ship
+    function isShipStart(data, x, y) {
+      if (data[y][x] !== 1) return false;
+      const isHorizontal = isHorizontalShip(data, x, y);
+      
+      if (isHorizontal) {
+        return x === 0 || data[y][x - 1] !== 1;
+      } else {
+        return y === 0 || data[y - 1][x] !== 1;
+      }
+    }
+    function getShipImagePath(size) {
+      switch(size) {
+        case 1: return `/assets/img/ships/fragata.png`;
+        case 2: return `/assets/img/ships/destructor.png`;
+        case 3: return `/assets/img/ships/submarino.png`;
+        case 4: return `/assets/img/ships/acorazado.png`;
+        case 5: return `/assets/img/ships/portaviones.png`;
+        default: return '';
+      }
+    }
+    // Helper function to get ship class name based on size
+    function getShipClassName(size) {
+      switch(size) {
+        case 1: return 'fragata';
+        case 2: return 'destructor';
+        case 3: return 'submarino';
+        case 4: return 'acorazado';
+        case 5: return 'portaviones';
+        default: return '';
+      }
+    }
     const tableHeaderCells = new Array(10)
       .fill("", 0, 10)
       .map((_, i) => `<th>${i}</th>`)
@@ -414,8 +773,23 @@
                 return `<td class="cell ship-hit" data-x="${indexX}" data-y="${letters[indexY]}"></td>`;
               case 2:
                 return `<td class="cell water-hit" data-x="${indexX}" data-y="${letters[indexY]}"></td>`;
-              case 1:
-                return `<td class="cell ship" data-x="${indexX}" data-y="${letters[indexY]}"></td>`;
+              case 1:{
+                if (isShipStart(data, indexX, indexY)) {
+                  const shipSize = getShipSizeAtPosition(data, indexX, indexY);
+                  const isHorizontal = isHorizontalShip(data, indexX, indexY);
+                  const imgPath = getShipImagePath(shipSize);
+                  const shipClass = getShipClassName(shipSize);
+                  
+                  return `<td class="cell ship ${shipClass} ${isHorizontal ? 'horizontal' : 'vertical'}" 
+                  data-x="${indexX}" data-y="${letters[indexY]}" 
+                  data-size="${shipSize}">
+                  <img src="${imgPath}" alt="${shipClass}" class="ship-image"/>
+                  </td>`;
+              } else {
+                return `<td class="cell ship-continuation" data-x="${indexX}" data-y="${letters[indexY]}"></td>`;
+              }
+              }
+                
               case 0:
               default:
                 return `<td class="cell" data-x="${indexX}" data-y="${letters[indexY]}"></td>`;
@@ -595,6 +969,18 @@
       }, 300);
     }
   }
+  
+  // FUNCIONES BARCOS
+  function highlightSelectedShip(shipType) {
+    document.querySelectorAll('.barco').forEach(el => el.classList.remove('selected'));
+    document.getElementById(shipType).classList.add('selected');
+    
+  }
+  
+  // actualizacion tamaño barco tabla
+    
+
+// Modify the handleFriendlyGridClick function
 
   // Leave Game
   function leaveGame() {
@@ -603,4 +989,8 @@
   }
 })(window, document);
 
-
+function playClickSound() {
+  const sound = document.getElementById('clickSound');
+  sound.currentTime = 0; // Reinicia el sonido si ya está reproduciéndose
+  sound.play();
+}
